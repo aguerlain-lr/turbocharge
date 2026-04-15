@@ -63,7 +63,7 @@ Expand `~` to the actual home directory in all paths. Do not store `~` literally
 
 **6. Confirm.**
 
-> "Config written to `~/.claude/plugins/customizations/<plugin-name>/config.json`. You're ready to run `customize-plugin`."
+> "Config written to `<absolute-expanded-path-to-config.json>`. You're ready to run `customize-plugin`."
 
 ## Notes
 
@@ -75,3 +75,4 @@ Expand `~` to the actual home directory in all paths. Do not store `~` literally
 - You have set up git remotes but not yet written config.json — the git setup is not the goal. Config.json is the goal.
 - You are storing `~` literally in config.json paths — always expand to the absolute path (e.g., `/Users/username/...`).
 - You skipped fetching tags — `lastSyncedTag` must reflect a real tag from the upstream repo, not an invented value.
+- The user provided their fork path and you feel the setup is complete — it is NOT complete until config.json has been written to `~/.claude/plugins/customizations/<plugin-name>/config.json`.
