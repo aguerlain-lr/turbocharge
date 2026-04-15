@@ -43,6 +43,8 @@ Read these two files before touching anything:
 - `<localUpstreamPath>/skills/<skill-name>/SKILL.md` — the upstream original
 - `<targetForkPath>/skills/<skill-name>/SKILL.md` — the current fork state
 
+If either file does not exist, stop and tell the user before proceeding.
+
 Understanding both is required. The upstream read is not optional — it ensures you understand what you are diverging from and prevents accidental reversion of prior customizations.
 
 **6. Implement the change in the fork.**
