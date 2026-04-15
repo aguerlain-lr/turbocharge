@@ -1,6 +1,6 @@
 ---
 name: setup-plugin-customization
-description: Use when setting up or reconfiguring a local plugin customization workspace — cloning an upstream plugin source, linking a target fork, and writing config needed by customize-plugin and sync-plugin-customizations.
+description: "Use when setting up or reconfiguring a local plugin customization workspace — cloning an upstream plugin source, linking a target fork, and writing the config.json needed by customize-plugin and sync-plugin-customizations. Triggers on requests to configure, initialize, or update settings for customize-plugin or sync-plugin-customizations."
 ---
 
 # Setup Plugin Customization
@@ -17,18 +17,21 @@ Interactive onboarding skill. Configures the local workspace for managing a cust
 
 > "What is the GitHub URL of the upstream plugin repo you want to customize?"
 
+Derive `<plugin-name>` from the last path segment of the upstream URL (e.g., `my-plugin` from `https://github.com/org/my-plugin`).
+
 **2. Determine where to clone upstream locally.**
 
 > "Where should I clone it? (Suggested: `~/plugins/upstream/<plugin-name>`)"
 
 - If path exists and is a git repo: run `git -C <path> pull`
 - If path does not exist: run `git clone <url> <path>`
+- If path exists but is not a git repo: warn the user and ask them to confirm the correct path before proceeding.
 
 **3. Ask about the target fork.**
 
 > "Do you have an existing target fork repo? (y/n)"
 
-- **Yes:** Ask for its local path (you already have it — confirm the path).
+- **Yes:** Ask for the local path to the existing fork clone.
 - **No:**
   - Tell the user: "Please create a GitHub fork of `<upstream-url>` and paste the fork URL here."
   - Wait for the fork URL, then ask where to clone it locally.
@@ -40,6 +43,8 @@ Interactive onboarding skill. Configures the local workspace for managing a cust
 git -C <localUpstreamPath> fetch --tags
 git -C <localUpstreamPath> tag --sort=-version:refname | head -1
 ```
+
+If `fetch --tags` fails (network error, authentication), report the error to the user and do not proceed to write config.
 
 Record the result as `lastSyncedTag`. If there are no tags, use the current commit SHA as a fallback and note this.
 
@@ -67,7 +72,7 @@ Expand `~` to the actual home directory in all paths. Do not store `~` literally
 
 ## Notes
 
-- If `config.json` already exists, read it first and show the user current values. Only update fields they explicitly want to change.
+- If `config.json` already exists, read it and display all current values to the user. Ask: 'Which fields do you want to update?' Then only re-run the steps for those fields.
 - Never modify any files inside the upstream clone or the target fork.
 
 ## Red Flags — Stop if You Notice These
