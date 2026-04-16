@@ -69,7 +69,7 @@ Create the file if it does not exist. Then:
 ## <skill-name>
 **Changed:** <what was changed, concisely>
 **Why:** <why the user wanted this>
-**Upstream ref:** <pluginName> <lastSyncedTag>
+**Upstream ref:** <repo-name> <lastSyncedTag>
 ```
 
 **8. Commit and push.**
