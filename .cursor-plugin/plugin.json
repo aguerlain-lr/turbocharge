@@ -3,8 +3,8 @@
   "displayName": "Turbocharge",
   "description": "Customize and sync forked agentic plugins. Three skills: setup-plugin-customization, customize-plugin, sync-plugin-customizations.",
   "version": "0.1.0",
-  "homepage": "https://github.com/YOUR_GITHUB_ORG/turbocharge",
-  "repository": "https://github.com/YOUR_GITHUB_ORG/turbocharge",
+  "homepage": "https://github.com/aguerlain-lr/turbocharge",
+  "repository": "https://github.com/aguerlain-lr/turbocharge",
   "keywords": ["plugins", "customization", "sync", "fork", "superpowers"],
   "skills": "./skills/"
 }
