@@ -11,7 +11,7 @@ Automated sync skill. Checks upstream for a new tagged release and merges it int
 
 ## Prerequisites
 
-`<targetRepoPath>/turbocharge.json` must exist with valid `upstreamRepo` and `lastSyncedTag`. Run `setup-plugin-customization` first if it does not. The user must provide `<targetRepoPath>` at invocation time.
+`<targetRepoPath>/.turbocharge/settings.json` must exist with valid `upstreamRepo` and `lastSyncedTag`. Run `setup-plugin-customization` first if it does not. The user must provide `<targetRepoPath>` at invocation time.
 
 ## Red Flags — Stop if You Notice These
 
@@ -19,7 +19,7 @@ Automated sync skill. Checks upstream for a new tagged release and merges it int
 - Merge succeeded but you have not dispatched the validation subagent — do not commit yet. The subagent run is required before the commit.
 - Merge failed and you are about to leave the repo in a mid-merge state without dispatching resolution subagents — STOP. Always: dispatch subagents first, then either continue the merge (all resolved) or inject warnings + write kickstart files + abort + commit + update config.
 - You are about to run `git push` before the commit — STOP. Commit first, then push.
-- `turbocharge.json` has `syncStatus: "failed"` and you are about to proceed with a new merge — STOP. The prior failure must be resolved first.
+- `.turbocharge/settings.json` has `syncStatus: "failed"` and you are about to proceed with a new merge — STOP. The prior failure must be resolved first.
 - `git fetch --tags` exited with an error — STOP. Log the error and exit. Do not proceed with a stale tag list.
 
 ## Steps
@@ -29,7 +29,7 @@ Automated sync skill. Checks upstream for a new tagged release and merges it int
 Ask for the target repo path if the user has not provided it:
 > "What is the local path to your target repo?"
 
-Read `<targetRepoPath>/turbocharge.json` to get `upstreamRepo` and `lastSyncedTag`.
+Read `<targetRepoPath>/.turbocharge/settings.json` to get `upstreamRepo` and `lastSyncedTag`.
 
 Derive `<repo-name>` from the last path segment of `upstreamRepo`.
 
@@ -41,9 +41,9 @@ Ensure `~/.turbocharge/<repo-name>` exists and is up to date:
 
 Note: Step 1 runs `fetch --tags` which refreshes tags after a pull.
 
-If `"syncStatus": "failed"` is present in `turbocharge.json`:
+If `"syncStatus": "failed"` is present in `.turbocharge/settings.json`:
 
-> "⚠️ A previous sync failed for tag `<failedTag>`. Resolve that before syncing to a newer tag. Run `customize-plugin` on any skill with a sync-failed warning, then remove `syncStatus` and `failedTag` from `turbocharge.json`."
+> "⚠️ A previous sync failed for tag `<failedTag>`. Resolve that before syncing to a newer tag. Run `customize-plugin` on any skill with a sync-failed warning, then remove `syncStatus` and `failedTag` from `.turbocharge/settings.json`."
 
 Stop. Do not attempt a new merge.
 
@@ -111,7 +111,7 @@ This step is required. Do not skip it and do not do it yourself — dispatch a f
 Substitute `<targetRepoPath>`, `<repo-name>`, and `<latestTag>` with their actual values before dispatching these instructions.
 
 > "If `intent.md` does not exist or is empty, report 'intent.md not found or empty — no validation needed' and stop without making changes.
-> Read `<targetRepoPath>/intent.md`.
+> Read `<targetRepoPath>/.turbocharge/intent.md`.
 > List all directories under `~/.turbocharge/<repo-name>/skills/`.
 > For each `## <section-name>` heading in intent.md, check whether a directory named `<section-name>` exists in the upstream skills list.
 > If a skill directory is missing from upstream (could be removed or renamed): remove that section from intent.md and append a note: `<!-- <skill-name> removed or renamed in upstream <latestTag> -->`.
@@ -120,7 +120,7 @@ Substitute `<targetRepoPath>`, `<repo-name>`, and `<latestTag>` with their actua
 
 **7. Update config.**
 
-In `<targetRepoPath>/turbocharge.json`:
+In `<targetRepoPath>/.turbocharge/settings.json`:
 - Set `lastSyncedTag` to `<latestTag>`
 - Remove `syncStatus` and `failedTag` keys if present
 
@@ -160,7 +160,7 @@ For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill na
 >
 > **Conflicted file:** Read `<targetRepoPath>/<skill-file-path>` — it contains git conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
 >
-> **Original customization intent:** Read `<targetRepoPath>/intent.md` and extract the `## <skill-name>` section.
+> **Original customization intent:** Read `<targetRepoPath>/.turbocharge/intent.md` and extract the `## <skill-name>` section.
 >
 > **Original customization diff:** Run:
 > ```bash
@@ -201,7 +201,7 @@ For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill na
 > 3. Apply the change via `turbocharge:customize-plugin`.
 > 4. **Delete this file** — it is stale once resolved.
 > 5. **Update `intent.md`** for `<skill-name>` — the old intent is no longer valid.
-> 6. Remove `syncStatus` and `failedTag` from `<targetRepoPath>/turbocharge.json`.
+> 6. Remove `syncStatus` and `failedTag` from `<targetRepoPath>/.turbocharge/settings.json`.
 > ```"
 
 **11. Assess subagent results and branch.**
@@ -264,19 +264,19 @@ git -C <targetRepoPath> commit -m "sync: FAILED merge with upstream <latestTag> 
 
 **13. Update config.**
 
-In `<targetRepoPath>/turbocharge.json`, add:
+In `<targetRepoPath>/.turbocharge/settings.json`, add:
 
 ```json
 "syncStatus": "failed",
 "failedTag": "<latestTag>"
 ```
 
-Save turbocharge.json.
+Save .turbocharge/settings.json.
 
-Commit the updated `turbocharge.json` so the failure state is recorded in git:
+Commit the updated `.turbocharge/settings.json` so the failure state is recorded in git:
 
 ```bash
-git -C <targetRepoPath> add turbocharge.json
+git -C <targetRepoPath> add .turbocharge/
 git -C <targetRepoPath> commit -m "sync: record failed sync state for <latestTag>"
 ```
 

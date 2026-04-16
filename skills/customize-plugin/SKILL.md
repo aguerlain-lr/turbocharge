@@ -13,7 +13,7 @@ Implements a described customization in the target repo and records the reasonin
 
 ## Prerequisites
 
-`turbocharge.json` must exist in the target repo. Run `setup-plugin-customization` first if it does not.
+`.turbocharge/settings.json` must exist in the target repo. Run `setup-plugin-customization` first if it does not.
 
 ## Steps
 
@@ -22,7 +22,7 @@ Implements a described customization in the target repo and records the reasonin
 Ask for the target repo path if the user has not provided it:
 > "What is the local path to your target repo?"
 
-Read `<targetRepoPath>/turbocharge.json` to get `upstreamRepo` and `lastSyncedTag`.
+Read `<targetRepoPath>/.turbocharge/settings.json` to get `upstreamRepo` and `lastSyncedTag`.
 
 Derive `<repo-name>` from the last path segment of `upstreamRepo` (e.g., `my-plugin` from `https://github.com/org/my-plugin`).
 
@@ -60,7 +60,7 @@ Edit `<targetRepoPath>/skills/<skill-name>/SKILL.md` only. Never touch the upstr
 
 **7. Update intent.md.**
 
-File: `<targetRepoPath>/intent.md`
+File: `<targetRepoPath>/.turbocharge/intent.md`
 
 Create the file if it does not exist. Then:
 - If a `## <skill-name>` section already exists: update it to reflect the new/revised intent.
@@ -76,7 +76,7 @@ Create the file if it does not exist. Then:
 **8. Commit and push.**
 
 ```bash
-git -C <targetRepoPath> add skills/<skill-name>/SKILL.md intent.md
+git -C <targetRepoPath> add skills/<skill-name>/SKILL.md .turbocharge/intent.md
 git -C <targetRepoPath> commit -m "customize: <skill-name> — <one-line description>"
 git -C <targetRepoPath> push
 ```
@@ -85,11 +85,11 @@ The commit and push are not optional — the commit creates the record that the 
 
 **9. Confirm.**
 
-> "Done. `<skill-name>` updated and intent recorded in `<targetRepoPath>/intent.md`."
+> "Done. `<skill-name>` updated and intent recorded in `<targetRepoPath>/.turbocharge/intent.md`."
 
 ## Red Flags — Stop if You Notice These
 
-- You have not read `turbocharge.json` yet and are about to edit files — STOP. Always read config first.
+- You have not read `.turbocharge/settings.json` yet and are about to edit files — STOP. Always read config first.
 - You are about to edit a file inside `~/.turbocharge/<repo-name>` — STOP. The upstream clone is read-only.
 - You read the target repo version but skipped the upstream version — STOP. Both reads are required before editing.
 - You have made the edit but haven't written `intent.md` — do not commit yet.
