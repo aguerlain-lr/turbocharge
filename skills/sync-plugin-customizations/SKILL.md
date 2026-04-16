@@ -1,43 +1,53 @@
 ---
 name: sync-plugin-customizations
-description: Use when running a scheduled check for upstream plugin release updates — fetches the latest tagged release, merges into the fork, uses agent-assisted conflict resolution (with kickstart files for unresolvable conflicts), and validates the intent artifact.
+description: Use when running a scheduled check for upstream plugin release updates — fetches the latest tagged release, merges into the target repo, uses agent-assisted conflict resolution (with kickstart files for unresolvable conflicts), and validates the intent artifact.
 ---
 
 # Sync Plugin Customizations
 
 ## Overview
 
-Automated sync skill. Checks upstream for a new tagged release and merges it into the target fork. Designed to run as a scheduled cron task. Never pushes — push is a human-triggered step.
+Automated sync skill. Checks upstream for a new tagged release and merges it into the target repo. Designed to run as a scheduled cron task. Commits and pushes on successful sync.
 
 ## Prerequisites
 
-`~/.claude/plugins/customizations/<plugin-name>/config.json` must exist with valid `localUpstreamPath`, `targetForkPath`, `upstreamRepo`, and `lastSyncedTag`.
+`<targetRepoPath>/turbocharge.json` must exist with valid `upstreamRepo` and `lastSyncedTag`. Run `setup-plugin-customization` first if it does not. The user must provide `<targetRepoPath>` at invocation time.
 
 ## Red Flags — Stop if You Notice These
 
 - You are about to merge a branch tip or commit SHA instead of a tag — STOP. Only merge tagged releases.
 - Merge succeeded but you have not dispatched the validation subagent — do not commit yet. The subagent run is required before the commit.
 - Merge failed and you are about to leave the repo in a mid-merge state without dispatching resolution subagents — STOP. Always: dispatch subagents first, then either continue the merge (all resolved) or inject warnings + write kickstart files + abort + commit + update config.
-- You are about to run `git push` — STOP. Never push. Push is a human-triggered step.
-- Config has `syncStatus: "failed"` and you are about to proceed with a new merge — STOP. The prior failure must be resolved first.
+- You are about to run `git push` before the commit — STOP. Commit first, then push.
+- `turbocharge.json` has `syncStatus: "failed"` and you are about to proceed with a new merge — STOP. The prior failure must be resolved first.
 - `git fetch --tags` exited with an error — STOP. Log the error and exit. Do not proceed with a stale tag list.
 
 ## Steps
 
-**0. Check for prior failed sync.**
+**0. Get target repo path and check for prior failed sync.**
 
-Read `~/.claude/plugins/customizations/<plugin-name>/config.json`.
+Ask for the target repo path if the user has not provided it:
+> "What is the local path to your target repo?"
 
-If `"syncStatus": "failed"` is present:
+Read `<targetRepoPath>/turbocharge.json` to get `upstreamRepo` and `lastSyncedTag`.
 
-> "⚠️ A previous sync failed for tag `<failedTag>`. Resolve that before syncing to a newer tag. Run `customize-plugin` on any skill with a sync-failed warning, then remove `syncStatus` and `failedTag` from config.json."
+Derive `<repo-name>` from the last path segment of `upstreamRepo`.
+
+Ensure `~/.turbocharge/<repo-name>` exists. If it does not, clone it:
+```bash
+git clone <upstreamRepo> ~/.turbocharge/<repo-name>
+```
+
+If `"syncStatus": "failed"` is present in `turbocharge.json`:
+
+> "⚠️ A previous sync failed for tag `<failedTag>`. Resolve that before syncing to a newer tag. Run `customize-plugin` on any skill with a sync-failed warning, then remove `syncStatus` and `failedTag` from `turbocharge.json`."
 
 Stop. Do not attempt a new merge.
 
 **1. Fetch upstream tags.**
 
 ```bash
-git -C <localUpstreamPath> fetch --tags
+git -C ~/.turbocharge/<repo-name> fetch --tags
 ```
 
 If the fetch command fails (non-zero exit): log the error and stop. Do not proceed with a stale local tag list.
@@ -45,7 +55,7 @@ If the fetch command fails (non-zero exit): log the error and stop. Do not proce
 **2. Find latest tag.**
 
 ```bash
-git -C <localUpstreamPath> tag --sort=-version:refname | head -1
+git -C ~/.turbocharge/<repo-name> tag --sort=-version:refname | head -1
 ```
 
 Store as `latestTag`.
@@ -61,29 +71,29 @@ If `latestTag == lastSyncedTag`: log "No new upstream release. Current: `<lastSy
 **4. Ensure upstream remote exists in fork.**
 
 ```bash
-git -C <targetForkPath> remote get-url upstream
+git -C <targetRepoPath> remote get-url upstream
 ```
 
 If this fails (remote not set): run:
 ```bash
-git -C <targetForkPath> remote add upstream <upstreamRepo>
-git -C <targetForkPath> fetch upstream --tags
+git -C <targetRepoPath> remote add upstream <upstreamRepo>
+git -C <targetRepoPath> fetch upstream --tags
 ```
 
 If it succeeds: run:
 ```bash
-git -C <targetForkPath> fetch upstream --tags
+git -C <targetRepoPath> fetch upstream --tags
 ```
 
 **5. Attempt merge.**
 
 ```bash
-git -C <targetForkPath> merge <latestTag> --no-edit
+git -C <targetRepoPath> merge <latestTag> --no-edit
 ```
 
 If the merge fails with the message "refusing to merge unrelated histories", retry with:
 ```bash
-git -C <targetForkPath> merge <latestTag> --no-edit --allow-unrelated-histories
+git -C <targetRepoPath> merge <latestTag> --no-edit --allow-unrelated-histories
 ```
 This handles forks that were initialized without shared git history (e.g., detached from a GitHub fork network). If this retry also fails, proceed to the On Merge Failure path below.
 
@@ -95,11 +105,11 @@ This handles forks that were initialized without shared git history (e.g., detac
 
 This step is required. Do not skip it and do not do it yourself — dispatch a fresh subagent with these exact instructions:
 
-Substitute `<plugin-name>` and `<latestTag>` with their actual values before dispatching these instructions.
+Substitute `<repo-name>` and `<latestTag>` with their actual values before dispatching these instructions.
 
 > "If `intent.md` does not exist or is empty, report 'intent.md not found or empty — no validation needed' and stop without making changes.
-> Read `~/.claude/plugins/customizations/<plugin-name>/intent.md`.
-> List all directories under `<localUpstreamPath>/skills/`.
+> Read `<targetRepoPath>/intent.md`.
+> List all directories under `~/.turbocharge/<repo-name>/skills/`.
 > For each `## <section-name>` heading in intent.md, check whether a directory named `<section-name>` exists in the upstream skills list.
 > If a skill directory is missing from upstream (could be removed or renamed): remove that section from intent.md and append a note: `<!-- <skill-name> removed or renamed in upstream <latestTag> -->`.
 > Save the updated intent.md.
@@ -107,15 +117,16 @@ Substitute `<plugin-name>` and `<latestTag>` with their actual values before dis
 
 **7. Update config.**
 
-In `~/.claude/plugins/customizations/<plugin-name>/config.json`:
+In `<targetRepoPath>/turbocharge.json`:
 - Set `lastSyncedTag` to `<latestTag>`
 - Remove `syncStatus` and `failedTag` keys if present
 
-**8. Commit.**
+**8. Commit and push.**
 
 ```bash
-git -C <targetForkPath> add -A
-git -C <targetForkPath> commit -m "sync: merge upstream <latestTag>"
+git -C <targetRepoPath> add -A
+git -C <targetRepoPath> commit -m "sync: merge upstream <latestTag>"
+git -C <targetRepoPath> push
 ```
 
 Log: "Sync complete. Now at upstream `<latestTag>`."
@@ -127,7 +138,7 @@ Log: "Sync complete. Now at upstream `<latestTag>`."
 **9. Identify conflicted files.**
 
 ```bash
-git -C <targetForkPath> diff --name-only --diff-filter=U
+git -C <targetRepoPath> diff --name-only --diff-filter=U
 ```
 
 Store the list as `conflictedFiles`. Filter to only files ending in `SKILL.md` — these are the ones that need agent-assisted resolution.
@@ -135,38 +146,38 @@ Store the list as `conflictedFiles`. Filter to only files ending in `SKILL.md` �
 If no files ending in `SKILL.md` are in the conflict list (the merge failed on other file types only): abort the merge, then proceed directly to Step 12 with `<N>` = 0 and no warning injection:
 
 ```bash
-git -C <targetForkPath> merge --abort
+git -C <targetRepoPath> merge --abort
 ```
 
 **10. Dispatch one conflict-resolution subagent per conflicted SKILL.md.**
 
-For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill name from the path (e.g., `skills/brainstorming/SKILL.md` → `brainstorming`). Ensure `~/.claude/plugins/customizations/<plugin-name>/conflicts/` exists (create if absent). Then dispatch a fresh subagent with the following exact instructions (substitute all `<placeholders>` with their actual values before dispatching):
+For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill name from the path (e.g., `skills/brainstorming/SKILL.md` → `brainstorming`). Ensure `~/.turbocharge/<repo-name>/conflicts/` exists (create if absent). Then dispatch a fresh subagent with the following exact instructions (substitute all `<placeholders>` with their actual values before dispatching):
 
 > "You are resolving a merge conflict in a plugin customization skill.
 >
-> **Conflicted file:** Read `<targetForkPath>/<skill-file-path>` — it contains git conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
+> **Conflicted file:** Read `<targetRepoPath>/<skill-file-path>` — it contains git conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
 >
-> **Original customization intent:** Read `~/.claude/plugins/customizations/<plugin-name>/intent.md` and extract the `## <skill-name>` section.
+> **Original customization intent:** Read `<targetRepoPath>/intent.md` and extract the `## <skill-name>` section.
 >
 > **Original customization diff:** Run:
 > ```bash
-> git -C <targetForkPath> diff <lastSyncedTag> HEAD -- <skill-file-path>
+> git -C <targetRepoPath> diff <lastSyncedTag> HEAD -- <skill-file-path>
 > ```
 > This shows the fork's customization relative to `<lastSyncedTag>` — i.e., the changes that must be preserved in the resolution.
 >
-> **Upstream content at `<latestTag>` (clean, no conflict markers):** Read `<localUpstreamPath>/skills/<skill-name>/SKILL.md`.
+> **Upstream content at `<latestTag>` (clean, no conflict markers):** Read `~/.turbocharge/<repo-name>/skills/<skill-name>/SKILL.md`.
 >
 > **Task:** Using the intent and original diff as context, attempt to produce a clean merged version of the conflicted file that (1) incorporates the upstream changes from `<latestTag>` and (2) preserves the customization described in the intent.
 >
 > **Decision:**
 >
-> If you can produce a clean merge with confidence (the upstream change and the customized section are clearly compatible, or the intent maps cleanly onto the new upstream structure): write the resolved content to `<targetForkPath>/<skill-file-path>` with all conflict markers removed, then report exactly: `RESOLVED: <skill-name>`
+> If you can produce a clean merge with confidence (the upstream change and the customized section are clearly compatible, or the intent maps cleanly onto the new upstream structure): write the resolved content to `<targetRepoPath>/<skill-file-path>` with all conflict markers removed, then report exactly: `RESOLVED: <skill-name>`
 >
-> If the upstream rewrote or removed the section the customization targeted, making the original intent ambiguous or inapplicable: do NOT modify the conflicted file. Write a kickstart file to `~/.claude/plugins/customizations/<plugin-name>/conflicts/<skill-name>-conflict.md` with the content below, then report exactly: `KICKSTART_GENERATED: <skill-name>`
+> If the upstream rewrote or removed the section the customization targeted, making the original intent ambiguous or inapplicable: do NOT modify the conflicted file. Write a kickstart file to `~/.turbocharge/<repo-name>/conflicts/<skill-name>-conflict.md` with the content below, then report exactly: `KICKSTART_GENERATED: <skill-name>`
 >
 > Kickstart file content (substitute actual values):
 > ```
-> # Conflict: <skill-name> — <plugin-name> v<lastSyncedTag> → v<latestTag>
+> # Conflict: <skill-name> — <repo-name> v<lastSyncedTag> → v<latestTag>
 >
 > ## What happened
 > The upstream skill changed in a way that conflicts with the existing customization.
@@ -179,7 +190,7 @@ For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill na
 > <git diff output from above>
 >
 > ## New upstream content (v<latestTag>)
-> <full content of <localUpstreamPath>/skills/<skill-name>/SKILL.md>
+> <full content of ~/.turbocharge/<repo-name>/skills/<skill-name>/SKILL.md>
 >
 > ## Resolution instructions
 > 1. Run `/superpowers:brainstorming` and reference this file as context.
@@ -187,7 +198,7 @@ For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill na
 > 3. Apply the change via `turbocharge:customize-plugin`.
 > 4. **Delete this file** — it is stale once resolved.
 > 5. **Update `intent.md`** for `<skill-name>` — the old intent is no longer valid.
-> 6. Remove `syncStatus` and `failedTag` from `~/.claude/plugins/customizations/<plugin-name>/config.json`.
+> 6. Remove `syncStatus` and `failedTag` from `<targetRepoPath>/turbocharge.json`.
 > ```"
 
 **11. Assess subagent results and branch.**
@@ -199,16 +210,16 @@ Collect outcomes from all dispatched subagents. Each returned either `RESOLVED: 
 Check whether any non-SKILL.md files are still conflicted:
 
 ```bash
-git -C <targetForkPath> diff --name-only --diff-filter=U
+git -C <targetRepoPath> diff --name-only --diff-filter=U
 ```
 
-If non-SKILL.md files are still conflicted: those files must be resolved before the merge can continue. For each conflicted non-SKILL.md file, accept the upstream version (run `git -C <targetForkPath> checkout --theirs -- <file>`) unless the file also appears in `intent.md`, in which case treat it the same as a SKILL.md conflict (dispatch a resolution subagent). Once all remaining conflicts are resolved, proceed to stage and continue.
+If non-SKILL.md files are still conflicted: those files must be resolved before the merge can continue. For each conflicted non-SKILL.md file, accept the upstream version (run `git -C <targetRepoPath> checkout --theirs -- <file>`) unless the file also appears in `intent.md`, in which case treat it the same as a SKILL.md conflict (dispatch a resolution subagent). Once all remaining conflicts are resolved, proceed to stage and continue.
 
 Stage the resolved SKILL.md files and continue the merge:
 
 ```bash
-git -C <targetForkPath> add <space-separated list of all resolved file paths>
-git -C <targetForkPath> merge --continue --no-edit
+git -C <targetRepoPath> add <space-separated list of all resolved file paths>
+git -C <targetRepoPath> merge --continue --no-edit
 ```
 
 Then proceed to **Step 6** (dispatch validation subagent) as if the merge had succeeded. Do NOT proceed to Steps 12–14.
@@ -218,7 +229,7 @@ Then proceed to **Step 6** (dispatch validation subagent) as if the merge had su
 For each skill that returned `KICKSTART_GENERATED`, prepend the following warning to its conflicted SKILL.md (leave conflict markers intact — do not remove them):
 
 ```
-> ⚠️ SYNC CONFLICT — See `~/.claude/plugins/customizations/<plugin-name>/conflicts/<skill-name>-conflict.md` to resolve.
+> ⚠️ SYNC CONFLICT — See `~/.turbocharge/<repo-name>/conflicts/<skill-name>-conflict.md` to resolve.
 > Run `/superpowers:brainstorming` with that file as context, then `turbocharge:customize-plugin`.
 
 ---
@@ -230,7 +241,7 @@ For skills that returned `RESOLVED`, their files are already clean — no warnin
 Abort the merge:
 
 ```bash
-git -C <targetForkPath> merge --abort
+git -C <targetRepoPath> merge --abort
 ```
 
 Note: warning-injected files written before abort are preserved (git does not overwrite modified files on abort).
@@ -239,26 +250,26 @@ Proceed to Step 12.
 
 **12. Commit conflict artifacts.**
 
-Stage and commit the warning-injected SKILL.md files. Kickstart files in `~/.claude/plugins/customizations/<plugin-name>/conflicts/` are local artifacts — they are not tracked by git and are not committed here.
+Stage and commit the warning-injected SKILL.md files. Kickstart files in `~/.turbocharge/<repo-name>/conflicts/` are local artifacts — they are not tracked by git and are not committed here.
 
 The count `<N>` is the number of skills that returned `KICKSTART_GENERATED`. If `<N>` = 0 (the failure path was reached due to non-SKILL.md conflicts only, so no warnings were injected), skip this commit step and proceed directly to Step 13.
 
 ```bash
-git -C <targetForkPath> add skills/
-git -C <targetForkPath> commit -m "sync: FAILED merge with upstream <latestTag> — <N> skill(s) need review"
+git -C <targetRepoPath> add skills/
+git -C <targetRepoPath> commit -m "sync: FAILED merge with upstream <latestTag> — <N> skill(s) need review"
 ```
 
 **13. Update config.**
 
-In `~/.claude/plugins/customizations/<plugin-name>/config.json`, add:
+In `<targetRepoPath>/turbocharge.json`, add:
 
 ```json
 "syncStatus": "failed",
 "failedTag": "<latestTag>"
 ```
 
-Save config.json.
+Save turbocharge.json.
 
 **14. Log and stop.**
 
-> "Sync failed for upstream `<latestTag>`. <RESOLVED_COUNT> skill(s) resolved automatically. <KICKSTART_COUNT> skill(s) need human review — see `~/.claude/plugins/customizations/<plugin-name>/conflicts/`."
+> "Sync failed for upstream `<latestTag>`. <RESOLVED_COUNT> skill(s) resolved automatically. <KICKSTART_COUNT> skill(s) need human review — see `~/.turbocharge/<repo-name>/conflicts/`."
