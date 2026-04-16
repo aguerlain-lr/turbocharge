@@ -241,7 +241,7 @@ Proceed to Step 12.
 
 Stage and commit the warning-injected SKILL.md files. Kickstart files in `~/.claude/plugins/customizations/<plugin-name>/conflicts/` are local artifacts — they are not tracked by git and are not committed here.
 
-The count `<N>` is the number of skills that returned `KICKSTART_GENERATED`.
+The count `<N>` is the number of skills that returned `KICKSTART_GENERATED`. If `<N>` = 0 (the failure path was reached due to non-SKILL.md conflicts only, so no warnings were injected), skip this commit step and proceed directly to Step 13.
 
 ```bash
 git -C <targetForkPath> add skills/
