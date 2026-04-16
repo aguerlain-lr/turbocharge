@@ -24,7 +24,7 @@ In Cursor Agent chat:
 /add-plugin turbocharge
 ```
 
-> **Note:** Exact install commands depend on marketplace registration. If the above don't work yet, clone the repo and load the skills manually.
+> **Note:** These commands require marketplace registration (in progress). In the meantime, clone the repo and load the skills manually from the `skills/` directory.
 
 ---
 
@@ -52,7 +52,7 @@ In Cursor Agent chat:
 
 When sync hits a skill conflict it can't auto-resolve — because upstream rewrote the exact section your customization targets — it doesn't leave you with a mess. It writes a kickstart file to `~/.claude/plugins/customizations/<plugin-name>/conflicts/<skill-name>-conflict.md` containing your original intent, your original diff, and the full new upstream content. It aborts the merge cleanly and marks the sync as failed in config.
 
-When you're ready to resolve, run `/superpowers:brainstorming` and reference the kickstart file as context. Once you've redesigned the customization for the new upstream version, apply it with `customize-plugin` and clear the failed sync flag.
+When you're ready to resolve, run `/superpowers:brainstorming` (the brainstorming skill from the [Superpowers plugin](https://github.com/obra/superpowers)) and reference the kickstart file as context. Once you've redesigned the customization for the new upstream version, apply it with `customize-plugin` and clear the failed sync flag.
 
 Skills that could be auto-resolved are handled without your involvement. You only see the ones that genuinely need judgment.
 
