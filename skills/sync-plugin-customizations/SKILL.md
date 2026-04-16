@@ -132,7 +132,11 @@ git -C <targetForkPath> diff --name-only --diff-filter=U
 
 Store the list as `conflictedFiles`. Filter to only files ending in `SKILL.md` — these are the ones that need agent-assisted resolution.
 
-If no files ending in `SKILL.md` are in the conflict list (the merge failed on other file types only), skip Steps 10–11 and proceed directly to Step 12 with `<N>` = 0 and no warning injection.
+If no files ending in `SKILL.md` are in the conflict list (the merge failed on other file types only): abort the merge, then proceed directly to Step 12 with `<N>` = 0 and no warning injection:
+
+```bash
+git -C <targetForkPath> merge --abort
+```
 
 **10. Dispatch one conflict-resolution subagent per conflicted SKILL.md.**
 
