@@ -6,5 +6,6 @@
   "homepage": "https://github.com/aguerlain-lr/turbocharge",
   "repository": "https://github.com/aguerlain-lr/turbocharge",
   "keywords": ["plugins", "customization", "sync", "fork", "superpowers"],
+  "logo": "./logo.svg",
   "skills": "./skills/"
 }
