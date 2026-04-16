@@ -77,14 +77,14 @@ Create the file if it does not exist. Then:
 
 Check `<targetRepoPath>/README.md` for the line `<!-- turbocharge-customized -->`.
 
-**If the marker is absent (first run or README is still the upstream default):**
+**If the marker is absent (first run or README has not yet been customized):**
 
-Run `git -C <targetRepoPath> remote get-url origin` to get the fork's origin URL. Derive `<fork-name>` from its last path segment.
+Run `git -C <targetRepoPath> remote get-url origin` to get the fork's origin URL. Derive `<fork-name>` from its last path segment. If this command fails (no `origin` remote), use `<repo-name>` as `<fork-name>` and skip the title-change check.
 
 Compare `<fork-name>` to `<repo-name>` (upstream). If they differ, the README title will change to `<fork-name>`. If they are the same, the title stays as-is.
 
 Read:
-- `<targetRepoPath>/README.md` — upstream content to use as source material
+- `<targetRepoPath>/README.md` — current README content to use as source material
 - `<targetRepoPath>/.turbocharge/intent.md` — customization entries
 - Each `<targetRepoPath>/skills/<skill-name>/SKILL.md` listed in `intent.md`
 
@@ -93,22 +93,20 @@ Write a new `README.md` with this structure:
 2. `_A customized fork of [<repo-name>](<upstreamRepo>)._`
 3. Rewritten body — based on upstream README content, updated to reflect customized skills. Preserve relevant upstream content; drop content that no longer applies.
 4. `## Customizations` — one prose entry per skill in `intent.md`, drawing from its **Changed** and **Why** fields.
-5. If the upstream README had an installation section, replace its content with:
-   ```
-   <!-- TODO: update installation instructions for your deployment -->
-   ```
+5. If the upstream README had an installation section, replace its content with this literal line:
+   `<!-- TODO: update installation instructions for your deployment -->`
    If the upstream README had no installation section, do not add one.
 6. Final line (must be last): `<!-- turbocharge-customized -->`
 
 **If the marker is present (subsequent runs):**
 
-Read `<targetRepoPath>/README.md` and `<targetRepoPath>/.turbocharge/intent.md`.
+Read `<targetRepoPath>/README.md`. If `<targetRepoPath>/.turbocharge/intent.md` does not exist, remove the `## Customizations` section from the README if present, and proceed to the commit step. Otherwise, read `intent.md` and continue below.
 
 Locate `## Customizations`:
 - If it exists: replace it with regenerated content.
 - If it does not exist: insert it immediately before `<!-- turbocharge-customized -->`.
 
-Regenerated `## Customizations` content: one prose entry per skill in `intent.md`, drawing from its **Changed** and **Why** fields. Leave everything else in the README untouched.
+Regenerated `## Customizations` content: one prose entry per skill currently in `intent.md`, drawing from its **Changed** and **Why** fields. Skills no longer in `intent.md` are dropped. Leave everything else in the README untouched.
 
 **9. Commit and push.**
 
