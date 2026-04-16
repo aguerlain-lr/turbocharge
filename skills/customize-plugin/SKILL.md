@@ -1,6 +1,6 @@
 ---
 name: customize-plugin
-description: Use when you want to implement a customization in your plugin fork — describe the desired change and have it applied to the target fork with the intent recorded.
+description: Use when you want to implement a customization in your target repo — describe the desired change and have it applied with the intent recorded.
 ---
 
 # Customize Plugin
@@ -13,21 +13,27 @@ Implements a described customization in the target fork and records the reasonin
 
 ## Prerequisites
 
-`~/.claude/plugins/customizations/<plugin-name>/config.json` must exist. Run `setup-plugin-customization` first if it does not.
+`turbocharge.json` must exist in the target repo. Run `setup-plugin-customization` first if it does not.
 
 ## Steps
 
-**1. Read config.**
+**1. Get the target repo path and read config.**
 
-Read `~/.claude/plugins/customizations/<plugin-name>/config.json` to get `localUpstreamPath`, `targetForkPath`, `pluginName`, and `lastSyncedTag`.
+Ask for the target repo path if the user has not provided it:
+> "What is the local path to your target repo?"
 
-Do this even if the user told you the path — the config is the authoritative source and may contain paths the user didn't mention.
+Read `<targetRepoPath>/turbocharge.json` to get `upstreamRepo` and `lastSyncedTag`.
 
-If multiple `config.json` files exist under `~/.claude/plugins/customizations/`, ask the user which plugin they want to customize.
+Derive `<repo-name>` from the last path segment of `upstreamRepo` (e.g., `my-plugin` from `https://github.com/org/my-plugin`).
+
+Ensure `~/.turbocharge/<repo-name>` exists. If it does not, clone it:
+```bash
+git clone <upstreamRepo> ~/.turbocharge/<repo-name>
+```
 
 **2. List available skills.**
 
-List skill directories in `<targetForkPath>/skills/` and show the user.
+List skill directories in `<targetRepoPath>/skills/` and show the user.
 
 **3. Ask which skill(s) to customize.**
 
@@ -40,8 +46,8 @@ List skill directories in `<targetForkPath>/skills/` and show the user.
 **5. Read both versions for context.**
 
 Read these two files before touching anything:
-- `<localUpstreamPath>/skills/<skill-name>/SKILL.md` — the upstream original
-- `<targetForkPath>/skills/<skill-name>/SKILL.md` — the current fork state
+- `~/.turbocharge/<repo-name>/skills/<skill-name>/SKILL.md` — the upstream original
+- `<targetRepoPath>/skills/<skill-name>/SKILL.md` — the current fork state
 
 If either file does not exist, stop and tell the user before proceeding.
 
@@ -49,11 +55,11 @@ Understanding both is required. The upstream read is not optional — it ensures
 
 **6. Implement the change in the fork.**
 
-Edit `<targetForkPath>/skills/<skill-name>/SKILL.md` only. Never touch the upstream clone.
+Edit `<targetRepoPath>/skills/<skill-name>/SKILL.md` only. Never touch the upstream clone.
 
 **7. Update intent.md.**
 
-File: `~/.claude/plugins/customizations/<plugin-name>/intent.md`
+File: `<targetRepoPath>/intent.md`
 
 Create the file if it does not exist. Then:
 - If a `## <skill-name>` section already exists: update it to reflect the new/revised intent.
@@ -66,23 +72,24 @@ Create the file if it does not exist. Then:
 **Upstream ref:** <pluginName> <lastSyncedTag>
 ```
 
-**8. Commit.**
+**8. Commit and push.**
 
 ```bash
-git -C <targetForkPath> add skills/<skill-name>/SKILL.md
-git -C <targetForkPath> commit -m "customize: <skill-name> — <one-line description>"
+git -C <targetRepoPath> add skills/<skill-name>/SKILL.md intent.md
+git -C <targetRepoPath> commit -m "customize: <skill-name> — <one-line description>"
+git -C <targetRepoPath> push
 ```
 
-The commit is not optional — it creates the record that the sync skill relies on to determine what changed.
+The commit and push are not optional — the commit creates the record that the sync skill relies on, and the push makes the intent available to collaborators.
 
 **9. Confirm.**
 
-> "Done. `<skill-name>` updated in `<targetForkPath>` and intent recorded in `~/.claude/plugins/customizations/<plugin-name>/intent.md`."
+> "Done. `<skill-name>` updated and intent recorded in `<targetRepoPath>/intent.md`."
 
 ## Red Flags — Stop if You Notice These
 
-- The user told you the file path and you are about to skip reading config.json — STOP. Always read config first. The user may not know all the paths that matter.
-- You are about to edit a file inside `localUpstreamPath` — STOP. The upstream clone is read-only.
-- You read the fork version but skipped the upstream version — STOP. Both reads are required before editing.
+- You have not read `turbocharge.json` yet and are about to edit files — STOP. Always read config first.
+- You are about to edit a file inside `~/.turbocharge/<repo-name>` — STOP. The upstream clone is read-only.
+- You read the target repo version but skipped the upstream version — STOP. Both reads are required before editing.
 - You have made the edit but haven't written `intent.md` — do not commit yet.
-- You are about to skip the commit — STOP. The commit is required, not optional.
+- You are about to skip the commit or the push — STOP. Both are required.
