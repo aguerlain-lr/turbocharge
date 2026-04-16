@@ -9,7 +9,7 @@ description: Use when you want to implement a customization in your target repo 
 
 Implements a described customization in the target repo and records the reasoning in `intent.md`. Always forward-direction: describe what you want, the skill implements it. Never reverse-engineers changes from manual edits.
 
-**This skill always ends with a commit, a written intent entry, and a push.** Do not consider the task complete until all three are done.
+**This skill always ends with a commit, a written intent entry, a README update, and a push.** Do not consider the task complete until all four are done.
 
 ## Prerequisites
 
@@ -73,19 +73,56 @@ Create the file if it does not exist. Then:
 **Upstream ref:** <repo-name> <lastSyncedTag>
 ```
 
-**8. Commit and push.**
+**8. Update README.md.**
+
+Check `<targetRepoPath>/README.md` for the line `<!-- turbocharge-customized -->`.
+
+**If the marker is absent (first run or README is still the upstream default):**
+
+Run `git -C <targetRepoPath> remote get-url origin` to get the fork's origin URL. Derive `<fork-name>` from its last path segment.
+
+Compare `<fork-name>` to `<repo-name>` (upstream). If they differ, the README title will change to `<fork-name>`. If they are the same, the title stays as-is.
+
+Read:
+- `<targetRepoPath>/README.md` — upstream content to use as source material
+- `<targetRepoPath>/.turbocharge/intent.md` — customization entries
+- Each `<targetRepoPath>/skills/<skill-name>/SKILL.md` listed in `intent.md`
+
+Write a new `README.md` with this structure:
+1. `# <fork-name>` (or upstream name if unchanged)
+2. `_A customized fork of [<repo-name>](<upstreamRepo>)._`
+3. Rewritten body — based on upstream README content, updated to reflect customized skills. Preserve relevant upstream content; drop content that no longer applies.
+4. `## Customizations` — one prose entry per skill in `intent.md`, drawing from its **Changed** and **Why** fields.
+5. If the upstream README had an installation section, replace its content with:
+   ```
+   <!-- TODO: update installation instructions for your deployment -->
+   ```
+   If the upstream README had no installation section, do not add one.
+6. Final line (must be last): `<!-- turbocharge-customized -->`
+
+**If the marker is present (subsequent runs):**
+
+Read `<targetRepoPath>/README.md` and `<targetRepoPath>/.turbocharge/intent.md`.
+
+Locate `## Customizations`:
+- If it exists: replace it with regenerated content.
+- If it does not exist: insert it immediately before `<!-- turbocharge-customized -->`.
+
+Regenerated `## Customizations` content: one prose entry per skill in `intent.md`, drawing from its **Changed** and **Why** fields. Leave everything else in the README untouched.
+
+**9. Commit and push.**
 
 ```bash
-git -C <targetRepoPath> add skills/<skill-name>/SKILL.md .turbocharge/intent.md
+git -C <targetRepoPath> add skills/<skill-name>/SKILL.md .turbocharge/intent.md README.md
 git -C <targetRepoPath> commit -m "customize: <skill-name> — <one-line description>"
 git -C <targetRepoPath> push
 ```
 
 The commit and push are not optional — the commit creates the record that the sync skill relies on, and the push makes the intent available to collaborators.
 
-**9. Confirm.**
+**10. Confirm.**
 
-> "Done. `<skill-name>` updated and intent recorded in `<targetRepoPath>/.turbocharge/intent.md`."
+> "Done. `<skill-name>` updated, intent recorded in `<targetRepoPath>/.turbocharge/intent.md`, and README updated."
 
 ## Red Flags — Stop if You Notice These
 
@@ -94,3 +131,6 @@ The commit and push are not optional — the commit creates the record that the 
 - You read the target repo version but skipped the upstream version — STOP. Both reads are required before editing.
 - You have made the edit but haven't written `intent.md` — do not commit yet.
 - You are about to skip the commit or the push — STOP. Both are required.
+- You are about to write README.md but haven't read the current README first — STOP. The rewrite must be informed by existing content.
+- The README contains `<!-- turbocharge-customized -->` and you are about to rewrite the entire file — STOP. Only regenerate `## Customizations`.
+- You removed `<!-- turbocharge-customized -->` from the README output — STOP. It must always be the last line.
