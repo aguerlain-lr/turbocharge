@@ -10,21 +10,40 @@ Turbocharge is a set of three skills that manage this cycle for you. Fork freely
 
 ## Install
 
+Clone the repo, then register it with your agent platform.
+
+```bash
+git clone git@github.com:aguerlain-lr/turbocharge.git ~/dev/turbocharge
+```
+
 ### Claude Code
 
+```bash
+claude plugin marketplace add ~/dev/turbocharge
+claude plugin install turbocharge@turbocharge-dev
 ```
-/plugin install turbocharge@YOUR_GITHUB_ORG
+
+To pick up updates after pulling:
+
+```bash
+claude plugin update turbocharge@turbocharge-dev
 ```
 
 ### Cursor
 
-In Cursor Agent chat:
+Clone directly into Cursor's local plugins directory:
 
-```
-/add-plugin turbocharge
+```bash
+git clone git@github.com:aguerlain-lr/turbocharge.git ~/.cursor/plugins/local/turbocharge
 ```
 
-> **Note:** These commands require marketplace registration (in progress). In the meantime, clone the repo and load the skills manually from the `skills/` directory.
+Restart Cursor to pick up the plugin. To update:
+
+```bash
+cd ~/.cursor/plugins/local/turbocharge && git pull
+```
+
+Restart Cursor again after pulling.
 
 ---
 

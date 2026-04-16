@@ -1,0 +1,20 @@
+{
+  "name": "turbocharge-dev",
+  "description": "Development marketplace for Turbocharge",
+  "owner": {
+    "name": "Andre Guerlain",
+    "email": "andre.guerlain@logrocket.com"
+  },
+  "plugins": [
+    {
+      "name": "turbocharge",
+      "description": "Customize and sync forked agentic plugins. Three skills: setup-plugin-customization, customize-plugin, sync-plugin-customizations.",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "Andre Guerlain",
+        "email": "andre.guerlain@logrocket.com"
+      }
+    }
+  ]
+}

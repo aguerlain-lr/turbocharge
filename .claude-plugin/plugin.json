@@ -2,5 +2,12 @@
   "name": "turbocharge",
   "description": "Customize and sync forked agentic plugins. Three skills: setup-plugin-customization, customize-plugin, sync-plugin-customizations.",
   "version": "0.1.0",
+  "author": {
+    "name": "Andre Guerlain",
+    "email": "andre.guerlain@logrocket.com"
+  },
+  "homepage": "https://github.com/aguerlain-lr/turbocharge",
+  "repository": "https://github.com/aguerlain-lr/turbocharge",
+  "license": "MIT",
   "keywords": ["plugins", "customization", "sync", "fork", "superpowers"]
 }
