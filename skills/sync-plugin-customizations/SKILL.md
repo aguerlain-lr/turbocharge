@@ -105,7 +105,7 @@ This handles forks that were initialized without shared git history (e.g., detac
 
 This step is required. Do not skip it and do not do it yourself — dispatch a fresh subagent with these exact instructions:
 
-Substitute `<repo-name>` and `<latestTag>` with their actual values before dispatching these instructions.
+Substitute `<targetRepoPath>`, `<repo-name>`, and `<latestTag>` with their actual values before dispatching these instructions.
 
 > "If `intent.md` does not exist or is empty, report 'intent.md not found or empty — no validation needed' and stop without making changes.
 > Read `<targetRepoPath>/intent.md`.
@@ -151,7 +151,7 @@ git -C <targetRepoPath> merge --abort
 
 **10. Dispatch one conflict-resolution subagent per conflicted SKILL.md.**
 
-For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill name from the path (e.g., `skills/brainstorming/SKILL.md` → `brainstorming`). Ensure `~/.turbocharge/<repo-name>/conflicts/` exists (create if absent). Then dispatch a fresh subagent with the following exact instructions (substitute all `<placeholders>` with their actual values before dispatching):
+For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill name from the path (e.g., `skills/brainstorming/SKILL.md` → `brainstorming`). Ensure `~/.turbocharge/<repo-name>/conflicts/` exists (create if absent). Then dispatch a fresh subagent with the following exact instructions (substitute all `<placeholders>` with their actual values before dispatching — placeholders to substitute: `<targetRepoPath>`, `<repo-name>`, `<skill-name>`, `<skill-file-path>`, `<lastSyncedTag>`, `<latestTag>`):
 
 > "You are resolving a merge conflict in a plugin customization skill.
 >
