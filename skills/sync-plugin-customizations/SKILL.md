@@ -81,6 +81,12 @@ git -C <targetForkPath> fetch upstream --tags
 git -C <targetForkPath> merge <latestTag> --no-edit
 ```
 
+If the merge fails with the message "refusing to merge unrelated histories", retry with:
+```bash
+git -C <targetForkPath> merge <latestTag> --no-edit --allow-unrelated-histories
+```
+This handles forks that were initialized without shared git history (e.g., detached from a GitHub fork network). If this retry also fails, proceed to the On Merge Failure path below.
+
 ---
 
 ### On Merge Success
