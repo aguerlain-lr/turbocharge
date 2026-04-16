@@ -7,7 +7,7 @@ description: Use when you want to implement a customization in your target repo 
 
 ## Overview
 
-Implements a described customization in the target fork and records the reasoning in `intent.md`. Always forward-direction: describe what you want, the skill implements it. Never reverse-engineers changes from manual edits.
+Implements a described customization in the target repo and records the reasoning in `intent.md`. Always forward-direction: describe what you want, the skill implements it. Never reverse-engineers changes from manual edits.
 
 **This skill always ends with a commit and a written intent entry.** Do not consider the task complete until both are done.
 
@@ -26,10 +26,11 @@ Read `<targetRepoPath>/turbocharge.json` to get `upstreamRepo` and `lastSyncedTa
 
 Derive `<repo-name>` from the last path segment of `upstreamRepo` (e.g., `my-plugin` from `https://github.com/org/my-plugin`).
 
-Ensure `~/.turbocharge/<repo-name>` exists. If it does not, clone it:
-```bash
-git clone <upstreamRepo> ~/.turbocharge/<repo-name>
-```
+Ensure `~/.turbocharge/<repo-name>` exists and is up to date:
+
+- If the path does not exist: run `git clone <upstreamRepo> ~/.turbocharge/<repo-name>`
+- If the path exists and is a git repo: run `git -C ~/.turbocharge/<repo-name> pull`
+- If the path exists but is not a git repo: warn the user and stop.
 
 **2. List available skills.**
 
