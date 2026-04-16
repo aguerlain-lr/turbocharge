@@ -1,6 +1,6 @@
 ---
 name: setup-plugin-customization
-description: "Use when setting up or reconfiguring a local plugin customization workspace — cloning an upstream plugin source, linking a target fork, and writing the config.json needed by customize-plugin and sync-plugin-customizations. Triggers on requests to configure, initialize, or update settings for customize-plugin or sync-plugin-customizations."
+description: "Use when setting up or reconfiguring a plugin customization workspace — cloning an upstream plugin source, linking a target repo, and writing turbocharge.json to the target repo for use by customize-plugin and sync-plugin-customizations. Triggers on requests to configure, initialize, or update settings for customize-plugin or sync-plugin-customizations."
 ---
 
 # Setup Plugin Customization
