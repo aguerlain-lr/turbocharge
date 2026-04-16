@@ -7,9 +7,9 @@ description: "Use when setting up or reconfiguring a local plugin customization 
 
 ## Overview
 
-Interactive onboarding skill. Configures the local workspace for managing a customized plugin fork. Re-runnable — re-running updates existing config fields.
+Interactive onboarding skill. Configures a target repo for use with turbocharge. Re-runnable — re-running updates `turbocharge.json` in place.
 
-**The primary output of this skill is `config.json`.** Without it, `customize-plugin` and `sync-plugin-customizations` cannot run. Do not consider this skill complete until config.json is written.
+**The primary output of this skill is `turbocharge.json` committed to the target repo.** Without it, `customize-plugin` and `sync-plugin-customizations` cannot run. Do not consider this skill complete until `turbocharge.json` is committed and pushed.
 
 ## Steps
 
@@ -17,67 +17,64 @@ Interactive onboarding skill. Configures the local workspace for managing a cust
 
 > "What is the GitHub URL of the upstream plugin repo you want to customize?"
 
-Derive `<plugin-name>` from the last path segment of the upstream URL (e.g., `my-plugin` from `https://github.com/org/my-plugin`).
+Derive `<repo-name>` from the last path segment of the URL (e.g., `my-plugin` from `https://github.com/org/my-plugin`).
 
-**2. Determine where to clone upstream locally.**
+**2. Ask for the target repo path.**
 
-> "Where should I clone it? (Suggested: `~/plugins/upstream/<plugin-name>`)"
+> "What is the local path to your target repo (the repo you want to customise)?"
 
-- If path exists and is a git repo: run `git -C <path> pull`
-- If path does not exist: run `git clone <url> <path>`
-- If path exists but is not a git repo: warn the user and ask them to confirm the correct path before proceeding.
+This is the repo where `turbocharge.json` and `intent.md` will live.
 
-**3. Ask about the target fork.**
+**3. Clone upstream to `~/.turbocharge/<repo-name>`.**
 
-> "Do you have an existing target fork repo? (y/n)"
+Expand `~` to the actual home directory.
 
-- **Yes:** Ask for the local path to the existing fork clone.
-- **No:**
-  - Tell the user: "Please create a GitHub fork of `<upstream-url>` and paste the fork URL here."
-  - Wait for the fork URL, then ask where to clone it locally.
-  - Run: `git clone <fork-url> <local-path>`
+- If the path does not exist: run `git clone <upstream-url> ~/.turbocharge/<repo-name>`
+- If the path exists and is a git repo: run `git -C ~/.turbocharge/<repo-name> pull`
+- If the path exists but is not a git repo: warn the user and stop.
 
 **4. Get the latest upstream tag.**
 
 ```bash
-git -C <localUpstreamPath> fetch --tags
-git -C <localUpstreamPath> tag --sort=-version:refname | head -1
+git -C ~/.turbocharge/<repo-name> fetch --tags
+git -C ~/.turbocharge/<repo-name> tag --sort=-version:refname | head -1
 ```
 
-If `fetch --tags` fails (network error, authentication), report the error to the user and do not proceed to write config.
+If `fetch --tags` fails: report the error and stop. Do not write `turbocharge.json` with a stale tag.
 
-Record the result as `lastSyncedTag`. If there are no tags, use the current commit SHA as a fallback and note this.
+Record the result as `lastSyncedTag`. If there are no tags, use the current commit SHA as a fallback and note this to the user.
 
-**5. Write config.**
+**5. Write `turbocharge.json` to the target repo.**
 
-Create `~/.claude/plugins/customizations/<plugin-name>/` if it does not exist.
-
-Write `~/.claude/plugins/customizations/<plugin-name>/config.json`:
+Write `<targetRepoPath>/turbocharge.json`:
 
 ```json
 {
-  "pluginName": "<plugin-name>",
   "upstreamRepo": "<upstream-github-url>",
-  "localUpstreamPath": "<absolute-expanded-path>",
-  "targetForkPath": "<absolute-expanded-path>",
   "lastSyncedTag": "<latest-tag>"
 }
 ```
 
-Expand `~` to the actual home directory in all paths. Do not store `~` literally.
+**6. Commit and push.**
 
-**6. Confirm.**
+```bash
+git -C <targetRepoPath> add turbocharge.json
+git -C <targetRepoPath> commit -m "turbocharge: initialise config"
+git -C <targetRepoPath> push
+```
 
-> "Config written to `<absolute-expanded-path-to-config.json>`. You're ready to run `customize-plugin`."
+**7. Confirm.**
+
+> "`turbocharge.json` written and pushed to `<targetRepoPath>`. You're ready to run `customize-plugin`."
 
 ## Notes
 
-- If `config.json` already exists, read it and display all current values to the user. Ask: 'Which fields do you want to update?' Then only re-run the steps for those fields.
-- Never modify any files inside the upstream clone or the target fork.
+- If `turbocharge.json` already exists in the target repo, read it and display the current values. Ask: "Which fields do you want to update?" Then only re-run the relevant steps.
+- Never modify any files inside the upstream clone at `~/.turbocharge/<repo-name>` other than via `git pull`.
 
 ## Red Flags — Stop if You Notice These
 
-- You have set up git remotes but not yet written config.json — the git setup is not the goal. Config.json is the goal.
-- You are storing `~` literally in config.json paths — always expand to the absolute path (e.g., `/Users/username/...`).
+- You have cloned upstream but not yet written `turbocharge.json` — the git setup is not the goal. `turbocharge.json` is the goal.
 - You skipped fetching tags — `lastSyncedTag` must reflect a real tag from the upstream repo, not an invented value.
-- The user provided their fork path and you feel the setup is complete — it is NOT complete until config.json has been written to `~/.claude/plugins/customizations/<plugin-name>/config.json`.
+- You wrote `turbocharge.json` but have not committed and pushed — the skill is not complete until both are done.
+- `fetch --tags` exited with an error — do not write `turbocharge.json` with a stale or missing tag.
