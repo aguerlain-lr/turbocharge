@@ -132,6 +132,8 @@ git -C <targetForkPath> diff --name-only --diff-filter=U
 
 Store the list as `conflictedFiles`. Filter to only files ending in `SKILL.md` — these are the ones that need agent-assisted resolution.
 
+If no files ending in `SKILL.md` are in the conflict list (the merge failed on other file types only), skip Steps 10–11 and proceed directly to Step 12 with `<N>` = 0 and no warning injection.
+
 **10. Dispatch one conflict-resolution subagent per conflicted SKILL.md.**
 
 For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill name from the path (e.g., `skills/brainstorming/SKILL.md` → `brainstorming`). Ensure `~/.claude/plugins/customizations/<plugin-name>/conflicts/` exists (create if absent). Then dispatch a fresh subagent with the following exact instructions (substitute all `<placeholders>` with their actual values before dispatching):
@@ -146,7 +148,7 @@ For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill na
 > ```bash
 > git -C <targetForkPath> diff <lastSyncedTag> HEAD -- <skill-file-path>
 > ```
-> This shows exactly what was changed from the upstream base.
+> This shows the fork's customization relative to `<lastSyncedTag>` — i.e., the changes that must be preserved in the resolution.
 >
 > **Upstream content at `<latestTag>` (clean, no conflict markers):** Read `<localUpstreamPath>/skills/<skill-name>/SKILL.md`.
 >
@@ -181,7 +183,7 @@ For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill na
 > 3. Apply the change via `turbocharge:customize-plugin`.
 > 4. **Delete this file** — it is stale once resolved.
 > 5. **Update `intent.md`** for `<skill-name>` — the old intent is no longer valid.
-> 6. Remove `syncStatus` and `failedTag` from `config.json`.
+> 6. Remove `syncStatus` and `failedTag` from `~/.claude/plugins/customizations/<plugin-name>/config.json`.
 > ```"
 
 **11. Assess subagent results and branch.**
@@ -190,10 +192,18 @@ Collect outcomes from all dispatched subagents. Each returned either `RESOLVED: 
 
 **If all subagents returned RESOLVED:**
 
-Stage the resolved files and continue the merge:
+Check whether any non-SKILL.md files are still conflicted:
 
 ```bash
-git -C <targetForkPath> add <space-separated list of resolved skill file paths>
+git -C <targetForkPath> diff --name-only --diff-filter=U
+```
+
+If non-SKILL.md files are still conflicted: those files must be resolved before the merge can continue. For each conflicted non-SKILL.md file, accept the upstream version (run `git -C <targetForkPath> checkout --theirs -- <file>`) unless the file also appears in `intent.md`, in which case treat it the same as a SKILL.md conflict (dispatch a resolution subagent). Once all remaining conflicts are resolved, proceed to stage and continue.
+
+Stage the resolved SKILL.md files and continue the merge:
+
+```bash
+git -C <targetForkPath> add <space-separated list of all resolved file paths>
 git -C <targetForkPath> merge --continue --no-edit
 ```
 
@@ -225,14 +235,14 @@ Proceed to Step 12.
 
 **12. Commit conflict artifacts.**
 
-Stage and commit all modified files: warning-injected SKILL.md files and any kickstart files:
+Stage and commit the warning-injected SKILL.md files. Kickstart files in `~/.claude/plugins/customizations/<plugin-name>/conflicts/` are local artifacts — they are not tracked by git and are not committed here.
+
+The count `<N>` is the number of skills that returned `KICKSTART_GENERATED`.
 
 ```bash
 git -C <targetForkPath> add skills/
 git -C <targetForkPath> commit -m "sync: FAILED merge with upstream <latestTag> — <N> skill(s) need review"
 ```
-
-Where `<N>` is the count of skills that returned `KICKSTART_GENERATED`.
 
 **13. Update config.**
 
