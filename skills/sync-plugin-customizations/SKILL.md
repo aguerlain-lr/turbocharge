@@ -1,6 +1,6 @@
 ---
 name: sync-plugin-customizations
-description: Use when running a scheduled check for upstream plugin release updates — fetches the latest tagged release, merges into the fork, validates the intent artifact, and injects warnings on unresolvable conflicts.
+description: Use when running a scheduled check for upstream plugin release updates — fetches the latest tagged release, merges into the fork, uses agent-assisted conflict resolution (with kickstart files for unresolvable conflicts), and validates the intent artifact.
 ---
 
 # Sync Plugin Customizations
@@ -17,7 +17,7 @@ Automated sync skill. Checks upstream for a new tagged release and merges it int
 
 - You are about to merge a branch tip or commit SHA instead of a tag — STOP. Only merge tagged releases.
 - Merge succeeded but you have not dispatched the validation subagent — do not commit yet. The subagent run is required before the commit.
-- Merge failed and you are about to leave the repo in a mid-merge state without injecting warnings — STOP. Always: inject warnings first, then abort, then commit, then update config.
+- Merge failed and you are about to leave the repo in a mid-merge state without dispatching resolution subagents — STOP. Always: dispatch subagents first, then either continue the merge (all resolved) or inject warnings + write kickstart files + abort + commit + update config.
 - You are about to run `git push` — STOP. Never push. Push is a human-triggered step.
 - Config has `syncStatus: "failed"` and you are about to proceed with a new merge — STOP. The prior failure must be resolved first.
 - `git fetch --tags` exited with an error — STOP. Log the error and exit. Do not proceed with a stale tag list.
