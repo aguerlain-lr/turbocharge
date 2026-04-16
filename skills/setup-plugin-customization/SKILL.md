@@ -29,6 +29,8 @@ This is the repo where `turbocharge.json` and `intent.md` will live.
 
 Expand `~` to the actual home directory.
 
+Verify `<repo-name>` contains no path separators (`/`) or traversal sequences (`..`). If it does, warn the user and stop.
+
 - If the path does not exist: run `git clone <upstream-url> ~/.turbocharge/<repo-name>`
 - If the path exists and is a git repo: run `git -C ~/.turbocharge/<repo-name> pull`
 - If the path exists but is not a git repo: warn the user and stop.
@@ -63,6 +65,8 @@ git -C <targetRepoPath> commit -m "turbocharge: initialise config"
 git -C <targetRepoPath> push
 ```
 
+If `git push` fails, report the error to the user and stop. Do not proceed to Step 7. The skill is not complete until the push succeeds.
+
 **7. Confirm.**
 
 > "`turbocharge.json` written and pushed to `<targetRepoPath>`. You're ready to run `customize-plugin`."
@@ -70,6 +74,7 @@ git -C <targetRepoPath> push
 ## Notes
 
 - If `turbocharge.json` already exists in the target repo, read it and display the current values. Ask: "Which fields do you want to update?" Then only re-run the relevant steps.
+- If re-running and no fields were updated, skip Steps 5–6.
 - Never modify any files inside the upstream clone at `~/.turbocharge/<repo-name>` other than via `git pull`.
 
 ## Red Flags — Stop if You Notice These
