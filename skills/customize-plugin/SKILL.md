@@ -9,7 +9,7 @@ description: Use when you want to implement a customization in your target repo 
 
 Implements a described customization in the target repo and records the reasoning in `intent.md`. Always forward-direction: describe what you want, the skill implements it. Never reverse-engineers changes from manual edits.
 
-**This skill always ends with a commit and a written intent entry.** Do not consider the task complete until both are done.
+**This skill always ends with a commit, a written intent entry, and a push.** Do not consider the task complete until all three are done.
 
 ## Prerequisites
 

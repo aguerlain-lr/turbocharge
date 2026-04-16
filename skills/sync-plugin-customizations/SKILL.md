@@ -33,10 +33,13 @@ Read `<targetRepoPath>/turbocharge.json` to get `upstreamRepo` and `lastSyncedTa
 
 Derive `<repo-name>` from the last path segment of `upstreamRepo`.
 
-Ensure `~/.turbocharge/<repo-name>` exists. If it does not, clone it:
-```bash
-git clone <upstreamRepo> ~/.turbocharge/<repo-name>
-```
+Ensure `~/.turbocharge/<repo-name>` exists and is up to date:
+
+- If the path does not exist: run `git clone <upstreamRepo> ~/.turbocharge/<repo-name>`
+- If the path exists and is a git repo: run `git -C ~/.turbocharge/<repo-name> pull`
+- If the path exists but is not a git repo: warn the user and stop.
+
+Note: Step 1 runs `fetch --tags` which refreshes tags after a pull.
 
 If `"syncStatus": "failed"` is present in `turbocharge.json`:
 
@@ -269,6 +272,13 @@ In `<targetRepoPath>/turbocharge.json`, add:
 ```
 
 Save turbocharge.json.
+
+Commit the updated `turbocharge.json` so the failure state is recorded in git:
+
+```bash
+git -C <targetRepoPath> add turbocharge.json
+git -C <targetRepoPath> commit -m "sync: record failed sync state for <latestTag>"
+```
 
 **14. Log and stop.**
 
