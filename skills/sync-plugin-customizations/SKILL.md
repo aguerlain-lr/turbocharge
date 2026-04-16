@@ -130,44 +130,114 @@ Log: "Sync complete. Now at upstream `<latestTag>`."
 git -C <targetForkPath> diff --name-only --diff-filter=U
 ```
 
-**10. Inject warning into each conflicted SKILL.md.**
+Store the list as `conflictedFiles`. Filter to only files ending in `SKILL.md` — these are the ones that need agent-assisted resolution.
 
-For each conflicted file whose path ends in `SKILL.md`:
-- Read the file (it will contain git conflict markers)
-- Prepend the following block as the very first content in the file:
+**10. Dispatch one conflict-resolution subagent per conflicted SKILL.md.**
+
+For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill name from the path (e.g., `skills/brainstorming/SKILL.md` → `brainstorming`). Ensure `~/.claude/plugins/customizations/<plugin-name>/conflicts/` exists (create if absent). Then dispatch a fresh subagent with the following exact instructions (substitute all `<placeholders>` with their actual values before dispatching):
+
+> "You are resolving a merge conflict in a plugin customization skill.
+>
+> **Conflicted file:** Read `<targetForkPath>/<skill-file-path>` — it contains git conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
+>
+> **Original customization intent:** Read `~/.claude/plugins/customizations/<plugin-name>/intent.md` and extract the `## <skill-name>` section.
+>
+> **Original customization diff:** Run:
+> ```bash
+> git -C <targetForkPath> diff <lastSyncedTag> HEAD -- <skill-file-path>
+> ```
+> This shows exactly what was changed from the upstream base.
+>
+> **Upstream content at `<latestTag>` (clean, no conflict markers):** Read `<localUpstreamPath>/skills/<skill-name>/SKILL.md`.
+>
+> **Task:** Using the intent and original diff as context, attempt to produce a clean merged version of the conflicted file that (1) incorporates the upstream changes from `<latestTag>` and (2) preserves the customization described in the intent.
+>
+> **Decision:**
+>
+> If you can produce a clean merge with confidence (the upstream change and the customized section are clearly compatible, or the intent maps cleanly onto the new upstream structure): write the resolved content to `<targetForkPath>/<skill-file-path>` with all conflict markers removed, then report exactly: `RESOLVED: <skill-name>`
+>
+> If the upstream rewrote or removed the section the customization targeted, making the original intent ambiguous or inapplicable: do NOT modify the conflicted file. Write a kickstart file to `~/.claude/plugins/customizations/<plugin-name>/conflicts/<skill-name>-conflict.md` with the content below, then report exactly: `KICKSTART_GENERATED: <skill-name>`
+>
+> Kickstart file content (substitute actual values):
+> ```
+> # Conflict: <skill-name> — <plugin-name> v<lastSyncedTag> → v<latestTag>
+>
+> ## What happened
+> The upstream skill changed in a way that conflicts with the existing customization.
+> This file must be resolved via `/superpowers:brainstorming` before sync can complete.
+>
+> ## Original intent
+> <copied verbatim from intent.md for this skill>
+>
+> ## Original customization diff
+> <git diff output from above>
+>
+> ## New upstream content (v<latestTag>)
+> <full content of <localUpstreamPath>/skills/<skill-name>/SKILL.md>
+>
+> ## Resolution instructions
+> 1. Run `/superpowers:brainstorming` and reference this file as context.
+> 2. Design the updated customization for the new upstream version.
+> 3. Apply the change via `turbocharge:customize-plugin`.
+> 4. **Delete this file** — it is stale once resolved.
+> 5. **Update `intent.md`** for `<skill-name>` — the old intent is no longer valid.
+> 6. Remove `syncStatus` and `failedTag` from `config.json`.
+> ```"
+
+**11. Assess subagent results and branch.**
+
+Collect outcomes from all dispatched subagents. Each returned either `RESOLVED: <skill-name>` or `KICKSTART_GENERATED: <skill-name>`.
+
+**If all subagents returned RESOLVED:**
+
+Stage the resolved files and continue the merge:
+
+```bash
+git -C <targetForkPath> add <space-separated list of resolved skill file paths>
+git -C <targetForkPath> merge --continue --no-edit
+```
+
+Then proceed to **Step 6** (dispatch validation subagent) as if the merge had succeeded. Do NOT proceed to Steps 12–14.
+
+**If any subagent returned KICKSTART_GENERATED:**
+
+For each skill that returned `KICKSTART_GENERATED`, prepend the following warning to its conflicted SKILL.md (leave conflict markers intact — do not remove them):
 
 ```
-> ⚠️ SYNC FAILED — This skill has unresolved merge conflicts with upstream <latestTag>
-> and needs human review before running. Run `customize-plugin` to resolve,
-> then remove `syncStatus` and `failedTag` from config.json.
+> ⚠️ SYNC CONFLICT — See `~/.claude/plugins/customizations/<plugin-name>/conflicts/<skill-name>-conflict.md` to resolve.
+> Run `/superpowers:brainstorming` with that file as context, then `turbocharge:customize-plugin`.
 
 ---
 
 ```
 
-- Write the file back with the warning prepended. Do not remove or alter the conflict markers — leave them intact so a human can see the full conflict when they open the file.
+For skills that returned `RESOLVED`, their files are already clean — no warning needed.
 
-**11. Abort the merge.**
+Abort the merge:
 
 ```bash
 git -C <targetForkPath> merge --abort
 ```
 
-Note: The working-tree changes made in Step 10 (warning injections) are preserved by the abort — git does not overwrite modified files on abort.
+Note: warning-injected files written before abort are preserved (git does not overwrite modified files on abort).
 
-**12. Commit warning-injected files.**
+Proceed to Step 12.
 
-If no conflicted files ended in SKILL.md (no warnings were injected), skip this commit. The abort (Step 11) and config update (Step 13) still proceed.
+**12. Commit conflict artifacts.**
 
-If there are staged changes:
+Stage and commit all modified files: warning-injected SKILL.md files and any kickstart files:
+
 ```bash
 git -C <targetForkPath> add skills/
-git -C <targetForkPath> commit -m "sync: FAILED merge with upstream <latestTag> — warnings injected into conflicted skills"
+git -C <targetForkPath> commit -m "sync: FAILED merge with upstream <latestTag> — <N> skill(s) need review"
 ```
+
+Where `<N>` is the count of skills that returned `KICKSTART_GENERATED`.
 
 **13. Update config.**
 
 In `~/.claude/plugins/customizations/<plugin-name>/config.json`, add:
+
 ```json
 "syncStatus": "failed",
 "failedTag": "<latestTag>"
@@ -177,4 +247,4 @@ Save config.json.
 
 **14. Log and stop.**
 
-> "Sync failed for upstream `<latestTag>`. Warnings injected into conflicted skills. Resolve manually with `customize-plugin`."
+> "Sync failed for upstream `<latestTag>`. <RESOLVED_COUNT> skill(s) resolved automatically. <KICKSTART_COUNT> skill(s) need human review — see `~/.claude/plugins/customizations/<plugin-name>/conflicts/`."
