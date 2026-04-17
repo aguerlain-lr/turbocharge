@@ -92,7 +92,7 @@ Write a new `README.md` with this structure:
 1. `# <fork-name>` (or upstream name if unchanged)
 2. `_A customized fork of [<repo-name>](<upstreamRepo>)._`
 3. Rewritten body — based on upstream README content, updated to reflect customized skills. Preserve relevant upstream content; drop content that no longer applies.
-4. `## Customizations` — one prose entry per skill in `intent.md`, drawing from its **Changed** and **Why** fields.
+4. `## Customizations` — one prose entry per skill in `intent.md`, drawing from its **Upstream behavior** and **This fork** fields.
 5. If the upstream README had an installation section, replace its content with this literal line:
    `<!-- TODO: update installation instructions for your deployment -->`
    If the upstream README had no installation section, do not add one.
@@ -106,7 +106,7 @@ Locate `## Customizations`:
 - If it exists: replace it with regenerated content.
 - If it does not exist: insert it immediately before `<!-- turbocharge-customized -->`.
 
-Regenerated `## Customizations` content: one prose entry per skill currently in `intent.md`, drawing from its **Changed** and **Why** fields. Skills no longer in `intent.md` are dropped. Leave everything else in the README untouched.
+Regenerated `## Customizations` content: one prose entry per skill currently in `intent.md`, drawing from its **Upstream behavior** and **This fork** fields. Skills no longer in `intent.md` are dropped. Leave everything else in the README untouched.
 
 **9. Commit and push.**
 
