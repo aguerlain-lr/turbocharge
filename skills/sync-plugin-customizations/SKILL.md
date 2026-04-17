@@ -160,7 +160,7 @@ For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill na
 >
 > **Conflicted file:** Read `<targetRepoPath>/<skill-file-path>` — it contains git conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
 >
-> **Original customization intent:** Read `<targetRepoPath>/.turbocharge/intent.md` and extract the `## <skill-name>` section.
+> **Customization intent:** Read `<targetRepoPath>/.turbocharge/intent.md` and extract the `## <skill-name>` section.
 >
 > **Original customization diff:** Run:
 > ```bash
@@ -170,7 +170,7 @@ For each file in `conflictedFiles` that ends in `SKILL.md`, extract the skill na
 >
 > **Upstream content at `<latestTag>` (clean, no conflict markers):** Read `~/.turbocharge/<repo-name>/skills/<skill-name>/SKILL.md`.
 >
-> **Task:** Using the intent and original diff as context, attempt to produce a clean merged version of the conflicted file that (1) incorporates the upstream changes from `<latestTag>` and (2) preserves the customization described in the intent.
+> **Task:** Using the intent and original diff as context, attempt to produce a clean merged version of the conflicted file that (1) incorporates the upstream changes from `<latestTag>` and (2) preserves the behavior described in the `**This fork:**` field of the intent entry.
 >
 > **Decision:**
 >
