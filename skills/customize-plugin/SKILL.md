@@ -63,13 +63,13 @@ Edit `<targetRepoPath>/skills/<skill-name>/SKILL.md` only. Never touch the upstr
 File: `<targetRepoPath>/.turbocharge/intent.md`
 
 Create the file if it does not exist. Then:
-- If a `## <skill-name>` section already exists: update it to reflect the new/revised intent.
+- If a `## <skill-name>` section already exists: re-read the upstream skill file (`~/.turbocharge/<repo-name>/skills/<skill-name>/SKILL.md`) to anchor what upstream currently does, then rewrite the section from scratch using the new values. Never carry forward language about what the previous customization did or why it changed — the entry must describe the current divergence from upstream only.
 - If not: append a new section:
 
 ```markdown
 ## <skill-name>
-**Changed:** <what was changed, concisely>
-**Why:** <why the user wanted this>
+**Upstream behavior:** <what the upstream skill does in this area>
+**This fork:** <what this fork does instead>
 **Upstream ref:** <repo-name> <lastSyncedTag>
 ```
 
@@ -131,4 +131,5 @@ The commit and push are not optional — the commit creates the record that the 
 - You are about to skip the commit or the push — STOP. Both are required.
 - You are about to write README.md but haven't read the current README first — STOP. The rewrite must be informed by existing content.
 - The README contains `<!-- turbocharge-customized -->` and you are about to rewrite the entire file — STOP. Only regenerate `## Customizations`.
+- You are about to write or update intent.md using the previous customization as your baseline — STOP. intent.md always describes the current divergence from upstream, never a delta between customization versions.
 - You removed `<!-- turbocharge-customized -->` from the README output — STOP. It must always be the last line.
