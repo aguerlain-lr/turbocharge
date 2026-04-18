@@ -44,6 +44,12 @@ List skill directories in `<targetRepoPath>/skills/` and show the user.
 
 > "Describe the change you want to make and why you want it."
 
+**4b. Brainstorm if the change is large.**
+
+If the described change touches multiple skills, introduces new workflow steps, or is otherwise non-trivial — and a brainstorming or planning skill is available — invoke it before proceeding. Use the output to clarify the design before editing any files.
+
+If the change is small and targeted (e.g., adding one sentence, fixing a trigger condition), skip this step and proceed directly to Step 5.
+
 **5. Read both versions for context.**
 
 Read these two files before touching anything:
