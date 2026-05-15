@@ -6,15 +6,19 @@ Three weeks later, upstream ships a release with fixes you want. Now you have a 
 
 Turbocharge is a set of three skills that manage this cycle for you. Fork freely. Customize intentionally. Sync automatically.
 
+Agent-agnostic. The skills are plain Markdown — anything that can read and execute a SKILL.md (Claude Code, Cursor, or any other harness that runs skills) can drive them.
+
 ---
 
 ## Install
 
-Clone the repo, then register it with your agent platform.
+Clone the repo somewhere stable:
 
 ```bash
 git clone git@github.com:aguerlain-lr/turbocharge.git ~/dev/turbocharge
 ```
+
+Then point your agent at the `skills/` directory. Examples below — adapt for whichever harness you use.
 
 ### Claude Code
 
@@ -23,66 +27,79 @@ claude plugin marketplace add ~/dev/turbocharge
 claude plugin install turbocharge@turbocharge-dev
 ```
 
-To pick up updates after pulling:
+To pick up updates:
 
 ```bash
+cd ~/dev/turbocharge && git pull
 claude plugin update turbocharge@turbocharge-dev
 ```
 
 ### Cursor
 
-Clone directly into Cursor's local plugins directory:
-
 ```bash
 git clone git@github.com:aguerlain-lr/turbocharge.git ~/.cursor/plugins/local/turbocharge
 ```
 
-Restart Cursor to pick up the plugin. To update:
+Restart Cursor. To update: `cd ~/.cursor/plugins/local/turbocharge && git pull` and restart.
 
-```bash
-cd ~/.cursor/plugins/local/turbocharge && git pull
-```
+### Other agents
 
-Restart Cursor again after pulling.
+Any agent that loads skills from a directory works. Point it at `~/dev/turbocharge/skills/` (or wherever you cloned it) and the three skills become available by name.
 
 ---
 
 ## What You Get
 
-**`setup-plugin-customization`** — Run once per plugin you want to manage. Points turbocharge at your upstream source and your fork, and writes the config file that drives the other two skills.
+**`setup-plugin-customization`** — Run once per target repo. Asks for the upstream plugin URL and the local path to your fork, clones upstream to a local cache, and writes `.turbocharge/settings.json` into the fork. Commits and pushes.
 
-**`customize-plugin`** — Describe the change you want in plain language. The skill reads the upstream original and your current fork, implements the change, and records your intent in `intent.md`. That recorded intent is what lets sync work later.
+**`customize-plugin`** — Describe a change in plain language. The skill reads the upstream original and your fork's current state, applies the change, records your intent in `.turbocharge/intent.md`, regenerates the fork's `README.md` to reflect customizations, then commits and pushes. The recorded intent is what makes sync work later.
 
-**`sync-plugin-customizations`** — Checks upstream for new tagged releases. If one exists, merges it into your fork. Where it can resolve skill conflicts automatically, it does. Where it can't, it writes a detailed kickstart file and leaves you with a clean starting point for a brainstorming session.
-
----
-
-## Typical Workflow
-
-**First time:** Run `setup-plugin-customization`. It asks for your upstream URL and your fork path, clones what's missing, and writes a config file to `~/.claude/plugins/customizations/<plugin-name>/config.json`.
-
-**Making a change:** Tell your agent: "I want `customize-plugin` to also do X." The skill reads both the upstream original and your fork's current state, makes the edit, and appends an entry to `intent.md` explaining what was changed and why. This entry becomes the memory that sync uses to understand what to preserve.
-
-**Staying current:** Run `sync-plugin-customizations` — or set it up as a scheduled cron task. It fetches upstream tags, checks whether you're behind, and merges the new release. In the common case (upstream changed sections you didn't touch), the merge is clean and automatic. The config gets updated. Done.
-
----
-
-## Conflict Resolution
-
-When sync hits a skill conflict it can't auto-resolve — because upstream rewrote the exact section your customization targets — it doesn't leave you with a mess. It writes a kickstart file to `~/.claude/plugins/customizations/<plugin-name>/conflicts/<skill-name>-conflict.md` containing your original intent, your original diff, and the full new upstream content. It aborts the merge cleanly and marks the sync as failed in config.
-
-When you're ready to resolve, run `/superpowers:brainstorming` (the brainstorming skill from the [Superpowers plugin](https://github.com/obra/superpowers)) and reference the kickstart file as context. Once you've redesigned the customization for the new upstream version, apply it with `customize-plugin` and clear the failed sync flag.
-
-Skills that could be auto-resolved are handled without your involvement. You only see the ones that genuinely need judgment.
+**`sync-plugin-customizations`** — Checks upstream for new tagged releases. If one exists, merges it into your fork. Skill conflicts get dispatched to subagents — each either resolves cleanly or writes a kickstart file describing the conflict for human review. Commits the result either way.
 
 ---
 
 ## How It Works
 
-Two files live in `~/.claude/plugins/customizations/<plugin-name>/` (outside your fork repo):
+Two files live inside your fork at `<fork>/.turbocharge/`:
 
-**`config.json`** — workspace config. Tracks your upstream URL, local paths for both repos, the last successfully synced tag, and sync status. The sync skill reads and updates this on every run.
+- **`settings.json`** — tracks the upstream URL and the last successfully synced tag. Updated by sync. Committed to the fork.
+- **`intent.md`** — one section per customized skill describing what the fork does differently from upstream and why. Written by `customize-plugin`. Committed to the fork.
 
-**`intent.md`** — the memory of your customizations. One section per modified skill, recording what was changed and why. Without this, sync can't know what to preserve when merging. `customize-plugin` writes it; `sync-plugin-customizations` reads it.
+The upstream source is cloned locally to `~/.turbocharge/<repo-name>/` for reference. This clone is read-only — skills never modify it, only `git pull` it. Kickstart files for unresolved conflicts also land under `~/.turbocharge/<repo-name>/conflicts/` and are local-only (not tracked by git).
 
-Nothing is stored in your fork repo itself. Your fork stays clean.
+Because the config lives inside the fork, anyone who clones your fork can run sync without first running setup. The intent travels with the code.
+
+---
+
+## Typical Workflow
+
+**First time.** Run `setup-plugin-customization`. It asks for the upstream URL and your fork path, clones upstream to `~/.turbocharge/<repo-name>/`, writes `<fork>/.turbocharge/settings.json`, then commits and pushes.
+
+**Making a change.** Tell your agent: "use `customize-plugin` to make skill X do Y." The skill reads the upstream version and your fork's current state, applies the edit, appends a new section to `.turbocharge/intent.md`, regenerates the fork's `README.md` so the `## Customizations` block reflects current intent, then commits and pushes.
+
+**Staying current.** Run `sync-plugin-customizations` — manually, or on a scheduled task. It fetches upstream tags, compares to `lastSyncedTag`, and if there's a newer release, merges it. Clean merges auto-commit. Conflicts get the resolution flow below.
+
+---
+
+## Conflict Resolution
+
+When sync hits a merge conflict in a customized skill, it dispatches one subagent per conflicted `SKILL.md`. Each subagent reads the intent entry, the original customization diff, and the new upstream content, then decides:
+
+- **Can resolve cleanly** — writes the merged file, sync continues, single commit lands.
+- **Cannot resolve** — leaves the conflict markers in place, writes a kickstart file to `~/.turbocharge/<repo-name>/conflicts/<skill-name>-conflict.md` containing the original intent, the original diff, and the full new upstream content. Injects a warning at the top of the conflicted file pointing to the kickstart.
+
+If any kickstart was generated, sync aborts the merge, commits the warning-injected files, and sets `syncStatus: "failed"` in `settings.json`.
+
+To resolve, run `/superpowers:brainstorming` (from the [Superpowers plugin](https://github.com/obra/superpowers)) with the kickstart file as context to design the new customization, then apply it with `customize-plugin`. Delete the kickstart, remove `syncStatus` and `failedTag` from `settings.json`, and you're unblocked.
+
+---
+
+## Privacy
+
+See [PRIVACY.md](PRIVACY.md). Short version: turbocharge runs locally, talks to git remotes you already use, and stores nothing beyond what's in your fork and the local cache.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
