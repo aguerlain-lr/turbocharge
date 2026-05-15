@@ -90,7 +90,7 @@ When sync hits a merge conflict in a customized skill, it dispatches one subagen
 
 If any kickstart was generated, sync aborts the merge, commits the warning-injected files, and sets `syncStatus: "failed"` in `settings.json`.
 
-To resolve, run `/superpowers:brainstorming` (from the [Superpowers plugin](https://github.com/obra/superpowers)) with the kickstart file as context to design the new customization, then apply it with `customize-plugin`. Delete the kickstart, remove `syncStatus` and `failedTag` from `settings.json`, and you're unblocked.
+To resolve, run a planning/brainstorming skill, such as `/superpowers:brainstorming` (from the [Superpowers plugin](https://github.com/obra/superpowers)), with the kickstart file(s) as context to design the new customization, then apply it with `customize-plugin`. Delete the kickstart, remove `syncStatus` and `failedTag` from `settings.json`, and you're unblocked.
 
 ---
 
